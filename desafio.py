@@ -1,44 +1,42 @@
+```python
 import textwrap
 from abc import ABC, abstractclassmethod, abstractproperty
 from datetime import datetime
 
-# Módulo: desafio.py
-# Objetivo: exercício de Programação Orientada a Objetos (POO) que simula operações
-# bancárias básicas (criação de clientes/contas, depósito, saque e extrato).
-#
-# Observação de estilo: adicionei comentários explicativos para cada classe e
-# função sem alterar a lógica. Os comentários seguem um tom profissional e
-# objetivo, como se escritos por um desenvolvedor experiente no projeto.
-
+# Desafio.py
+# Propósito:
+#   Exercício didático que modela operações bancárias básicas em POO:
+#   - criação de clientes e contas
+#   - depósitos e saques
+#   - registro de histórico de transações
 
 class Cliente:
+    # Representa um cliente com endereço e lista de contas associadas.
     def __init__(self, endereco):
         self.endereco = endereco
         self.contas = []
 
+    # Encaminha a execução de uma transação para a própria transação,
+    # que é responsável por aplicar-se sobre a conta.
     def realizar_transacao(self, conta, transacao):
-        # Delegação explícita: a responsabilidade de executar a operação é da
-        # Transacao (Saque/Deposito) e da Conta. O Cliente apenas orquestra a
-        # chamada — isso mantém boa separação de responsabilidades.
         transacao.registrar(conta)
 
+    # Adiciona uma conta à lista de contas do cliente.
     def adicionar_conta(self, conta):
         self.contas.append(conta)
 
 
 class PessoaFisica(Cliente):
+    # Cliente do tipo pessoa física, com nome, data de nascimento e CPF.
     def __init__(self, nome, data_nascimento, cpf, endereco):
         super().__init__(endereco)
         self.nome = nome
         self.data_nascimento = data_nascimento
         self.cpf = cpf
 
-# Nota: data_nascimento é armazenada como string neste exercício. Em um
-# cenário real eu preferiria armazenar como datetime.date para permitir validação
-# e cálculos (idade, vencimento de documentos, etc.).
-
 
 class Conta:
+    # Conta bancária básica: saldo, número, agência, cliente e histórico.
     def __init__(self, numero, cliente):
         self._saldo = 0
         self._numero = numero
@@ -46,10 +44,12 @@ class Conta:
         self._cliente = cliente
         self._historico = Historico()
 
+    # Fabrica uma nova instância de conta com número e cliente fornecidos.
     @classmethod
     def nova_conta(cls, cliente, numero):
         return cls(numero, cliente)
 
+    # Propriedades de leitura para atributos encapsulados.
     @property
     def saldo(self):
         return self._saldo
@@ -70,19 +70,15 @@ class Conta:
     def historico(self):
         return self._historico
 
+    # Realiza saque validando saldo e valor; retorna True se sucesso.
     def sacar(self, valor):
         saldo = self.saldo
         excedeu_saldo = valor > saldo
 
-        # Fluxo de validação simples: primeiro verificamos saldo suficiente,
-        # depois validade do valor. Mantemos retornos booleanos e prints para a
-        # interface CLI existente. Em código de produção considerar exceptions
-        # para erros e separar mensagens da lógica.
         if excedeu_saldo:
             print("\n@@@ Operação falhou! Você não tem saldo suficiente. @@@")
 
         elif valor > 0:
-            # Atualiza o estado interno do saldo apenas quando válido
             self._saldo -= valor
             print("\n=== Saque realizado com sucesso! ===")
             return True
@@ -92,9 +88,8 @@ class Conta:
 
         return False
 
+    # Realiza depósito validando valor positivo; retorna True se sucesso.
     def depositar(self, valor):
-        # Validação do valor do depósito. Retornamos booleano indicando sucesso
-        # para manter compatibilidade com a lógica que registra transações.
         if valor > 0:
             self._saldo += valor
             print("\n=== Depósito realizado com sucesso! ===")
@@ -106,11 +101,13 @@ class Conta:
 
 
 class ContaCorrente(Conta):
+    # Conta corrente com limite por saque e limite de número de saques.
     def __init__(self, numero, cliente, limite=500, limite_saques=3):
         super().__init__(numero, cliente)
         self._limite = limite
         self._limite_saques = limite_saques
 
+    # Verifica regras específicas de conta corrente antes de realizar saque.
     def sacar(self, valor):
         numero_saques = len(
             [transacao for transacao in self.historico.transacoes if transacao["tipo"] == Saque.__name__]
@@ -119,11 +116,6 @@ class ContaCorrente(Conta):
         excedeu_limite = valor > self._limite
         excedeu_saques = numero_saques >= self._limite_saques
 
-        # Conta corrent com regras extras: limite por saque e limite no número de
-        # saques. Aqui contamos os saques já realizados no histórico da conta.
-        # Observação: o limite de número de saques é global desde a criação da
-        # conta — se a intenção for limitar por período (ex.: diário), seria
-        # preciso filtrar por timestamp das transações.
         if excedeu_limite:
             print("\n@@@ Operação falhou! O valor do saque excede o limite. @@@")
 
@@ -135,6 +127,7 @@ class ContaCorrente(Conta):
 
         return False
 
+    # Representação textual da conta para exibição em listagens.
     def __str__(self):
         return f"""\
             Agência:\t{self.agencia}
@@ -144,6 +137,7 @@ class ContaCorrente(Conta):
 
 
 class Historico:
+    # Armazena transações em memória como lista de dicionários.
     def __init__(self):
         self._transacoes = []
 
@@ -151,12 +145,8 @@ class Historico:
     def transacoes(self):
         return self._transacoes
 
+    # Adiciona registro de transação com tipo, valor e carimbo de data/hora.
     def adicionar_transacao(self, transacao):
-        # Registra um dicionário com tipo, valor e carimbo de data/hora.
-        # Observação importante: o formato de segundos correto é '%S' (maiúsculo).
-        # Aqui mantive o formato original do exercício, mas em revisões futuras
-        # recomendo trocar '%s' por '%S' para evitar inconsistências entre
-        # plataformas/implementações do strftime.
         self._transacoes.append(
             {
                 "tipo": transacao.__class__.__name__,
@@ -167,6 +157,7 @@ class Historico:
 
 
 class Transacao(ABC):
+    # Contrato abstrato para transações: propriedade 'valor' e método 'registrar'.
     @property
     @abstractproperty
     def valor(self):
@@ -176,14 +167,9 @@ class Transacao(ABC):
     def registrar(self, conta):
         pass
 
-# Nota sobre classes abstratas: este padrão usa `abstractproperty` e
-# `abstractclassmethod`. Hoje em dia é comum usar `@property` +
-# `@abstractmethod` para propriedades abstratas e `@abstractmethod` para
-# métodos de instância — a implementação atual funciona para o exercício,
-# mas vale considerar a modernização para maior clareza.
-
 
 class Saque(Transacao):
+    # Representa operação de saque; delega à conta e registra se ocorrer sucesso.
     def __init__(self, valor):
         self._valor = valor
 
@@ -194,12 +180,12 @@ class Saque(Transacao):
     def registrar(self, conta):
         sucesso_transacao = conta.sacar(self.valor)
 
-        # Se a conta aceitar o saque, registramos no histórico.
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
 
 
 class Deposito(Transacao):
+    # Representa operação de depósito; delega à conta e registra se ocorrer sucesso.
     def __init__(self, valor):
         self._valor = valor
 
@@ -210,12 +196,12 @@ class Deposito(Transacao):
     def registrar(self, conta):
         sucesso_transacao = conta.depositar(self.valor)
 
-        # Análogo ao Saque: ao depositar com sucesso adicionamos ao histórico.
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
 
 
 def menu():
+    # Exibe menu de opções no console e retorna a escolha do usuário.
     menu = """\n
     ================ MENU ================
     [d]\tDepositar
@@ -228,32 +214,24 @@ def menu():
     => """
     return input(textwrap.dedent(menu))
 
-# Interface de console: função simples que retorna a opção escolhida pelo
-# usuário. Mantida intencionalmente simples para o escopo do exercício.
-
 
 def filtrar_cliente(cpf, clientes):
+    # Retorna o primeiro cliente cujo CPF corresponde ao informado, ou None.
     clientes_filtrados = [cliente for cliente in clientes if cliente.cpf == cpf]
     return clientes_filtrados[0] if clientes_filtrados else None
 
-# Busca linear por CPF — suficiente para conjuntos pequenos usados em
-# exercícios. Em aplicações reais usar estrutura indexada (dict) ou banco.
-
 
 def recuperar_conta_cliente(cliente):
+    # Retorna a primeira conta associada ao cliente; em caso de ausência imprime aviso.
     if not cliente.contas:
         print("\n@@@ Cliente não possui conta! @@@")
         return
 
-    # FIXME: não permite cliente escolher a conta
     return cliente.contas[0]
-
-# Atenção: aqui sempre retornamos a primeira conta do cliente. Se o cliente
-# tiver múltiplas contas, o usuário não conseguirá escolher; o FIXME no código
-# já indica esse ponto.
 
 
 def depositar(clientes):
+    # Fluxo de interação para depósito: coleta CPF, valor e executa a transação.
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
 
@@ -270,12 +248,9 @@ def depositar(clientes):
 
     cliente.realizar_transacao(conta, transacao)
 
-# Observação de UX: as conversões `float(input(...))` podem levantar
-# ValueError se o usuário digitar texto inválido. Em produção envolveria
-# validação/loop de reentrada.
-
 
 def sacar(clientes):
+    # Fluxo de interação para saque: coleta CPF, valor e executa a transação.
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
 
@@ -294,6 +269,7 @@ def sacar(clientes):
 
 
 def exibir_extrato(clientes):
+    # Exibe o extrato de transações e o saldo da conta do cliente identificado.
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
 
@@ -319,11 +295,9 @@ def exibir_extrato(clientes):
     print(f"\nSaldo:\n\tR$ {conta.saldo:.2f}")
     print("==========================================")
 
-# A apresentação do extrato é básica e clara. Para melhorar: incluir datas e
-# formatar cada transação com timestamp (já gravado no histórico).
-
 
 def criar_cliente(clientes):
+    # Coleta dados via CLI e cria instância de PessoaFisica, se CPF não existir.
     cpf = input("Informe o CPF (somente número): ")
     cliente = filtrar_cliente(cpf, clientes)
 
@@ -341,11 +315,9 @@ def criar_cliente(clientes):
 
     print("\n=== Cliente criado com sucesso! ===")
 
-# Criação simples de cliente com checagem de CPF já existente feita na função
-# que chama esta rotina. Em código real, considerar validação do formato do CPF.
-
 
 def criar_conta(numero_conta, clientes, contas):
+    # Cria ContaCorrente vinculada ao cliente identificado pelo CPF.
     cpf = input("Informe o CPF do cliente: ")
     cliente = filtrar_cliente(cpf, clientes)
 
@@ -359,21 +331,16 @@ def criar_conta(numero_conta, clientes, contas):
 
     print("\n=== Conta criada com sucesso! ===")
 
-# A numeração de contas é incremental com base em `len(contas)`; para testes
-# e exercícios isso é suficiente, mas em produção usar gerador sequencial
-# persistente para evitar colisões.
-
 
 def listar_contas(contas):
+    # Imprime informações de todas as contas fornecidas.
     for conta in contas:
         print("=" * 100)
         print(textwrap.dedent(str(conta)))
 
-# Impressão formatada das contas — boa separação: a própria Conta define seu
-# formato via `__str__` e a listagem apenas exibe.
-
 
 def main():
+    # Loop principal da aplicação interativa (CLI).
     clientes = []
     contas = []
 
@@ -407,8 +374,4 @@ def main():
 
 
 main()
-
-# Ponto final: `main()` roda a aplicação em modo interativo. Para tornar o
-# módulo testável seria interessante proteger a execução com
-# `if __name__ == "__main__": main()` — assim evita side-effects ao importar
-# o módulo em testes automatizados.
+```
